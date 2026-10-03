@@ -12,3 +12,5 @@
 .vs/
 .vsconfig
 ignore.conf
+*.private.*
+/Assets/Scenes/FactoryMap.unity*
