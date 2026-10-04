@@ -80,6 +80,14 @@ public class MapGenerator : MonoBehaviour
 
     [Header("Ressourcen")]
     public GameObject resourceNodePrefab; // optional - leer lassen fuer einfache prozedurale Nodes
+    public OrePrefabSet[] orePrefabs; // Low-Poly-Erzvorkommen aus Blender pro Ressourcentyp (hat Vorrang)
+
+    [System.Serializable]
+    public struct OrePrefabSet
+    {
+        public ResourceType type;
+        public GameObject[] prefabs;
+    }
     public float resourceClusterScale = 130f;
     [Range(0f, 1f)] public float resourceClusterThreshold = 0.68f;
     public int resourceAttempts = 500;
@@ -873,10 +881,37 @@ public class MapGenerator : MonoBehaviour
         return false;
     }
 
+    // Sucht ein Low-Poly-Erz-Prefab fuer diesen Ressourcentyp (zufaellige Variante) oder null.
+    private GameObject PickOrePrefab(ResourceType type)
+    {
+        if (orePrefabs == null) return null;
+        foreach (OrePrefabSet set in orePrefabs)
+        {
+            if (set.type == type && set.prefabs != null && set.prefabs.Length > 0)
+                return set.prefabs[Random.Range(0, set.prefabs.Length)];
+        }
+        return null;
+    }
+
     private void SpawnResourceAt(Vector3 pos, ResourceType type)
     {
         GameObject node;
-        if (resourceNodePrefab != null)
+        GameObject orePrefab = PickOrePrefab(type);
+        if (orePrefab != null)
+        {
+            // Low-Poly-Erz aus Blender: zufaellig gedreht/skaliert und leicht eingegraben,
+            // damit es auf Haengen nicht schwebt.
+#if UNITY_EDITOR
+            node = (GameObject)PrefabUtility.InstantiatePrefab(orePrefab, resourceParent);
+#else
+            node = Instantiate(orePrefab, resourceParent);
+#endif
+            float oreScale = Random.Range(0.9f, 1.35f);
+            node.transform.position = pos + Vector3.down * 0.15f * oreScale;
+            node.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            node.transform.localScale = Vector3.one * oreScale;
+        }
+        else if (resourceNodePrefab != null)
         {
 #if UNITY_EDITOR
             node = (GameObject)PrefabUtility.InstantiatePrefab(resourceNodePrefab, resourceParent);

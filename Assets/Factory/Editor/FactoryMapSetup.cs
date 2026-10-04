@@ -423,6 +423,15 @@ public static class FactoryMapSetup
             { "Rock", CreateLitMaterial("Rock", new Color(0.52f, 0.51f, 0.49f)) },
             { "RockDark", CreateLitMaterial("RockDark", new Color(0.38f, 0.37f, 0.36f)) },
             { "Moss", CreateLitMaterial("Moss", new Color(0.33f, 0.50f, 0.22f)) },
+            { "Ore", CreateLitMaterial("Ore", new Color(0.80f, 0.42f, 0.18f)) },
+            { "Oil", CreateLitMaterial("Oil", new Color(0.03f, 0.03f, 0.04f), smoothness: 0.92f) },
+            { "MachineBody", CreateLitMaterial("MachineBody", new Color(0.92f, 0.55f, 0.14f), smoothness: 0.35f) },
+            { "MachineDark", CreateLitMaterial("MachineDark", new Color(0.18f, 0.19f, 0.21f), smoothness: 0.3f) },
+            { "MachineMetal", CreateLitMaterial("MachineMetal", new Color(0.66f, 0.68f, 0.70f), metallic: 0.6f, smoothness: 0.5f) },
+            { "PortIn", CreateLitMaterial("PortIn", new Color(0.22f, 0.78f, 0.32f), emission: new Color(0.05f, 0.3f, 0.08f)) },
+            { "PortOut", CreateLitMaterial("PortOut", new Color(0.22f, 0.52f, 0.92f), emission: new Color(0.05f, 0.15f, 0.35f)) },
+            { "Belt", CreateLitMaterial("Belt", new Color(0.10f, 0.10f, 0.11f)) },
+            { "BeltMark", CreateLitMaterial("BeltMark", new Color(0.96f, 0.82f, 0.16f)) },
         };
         Material autumn = CreateLitMaterial("LeavesAutumn", new Color(0.85f, 0.52f, 0.12f));
         Material particles = CreateParticleMaterial();
@@ -458,18 +467,88 @@ public static class FactoryMapSetup
             });
         }
 
+        foreach (OreSpec ore in OreSpecs)
+        {
+            Material oreMat = CreateLitMaterial("Ore" + ore.type, ore.color, metallic: ore.metallic, smoothness: ore.smoothness, emission: ore.emission);
+            string[] models = ore.type == ResourceType.Oil ? new[] { "Oil_Seep" } : OreModels;
+            for (int i = 0; i < models.Length; i++)
+            {
+                string modelName = models[i];
+                SavePrefab("Ore_" + ore.type + "_" + (char)('A' + i), modelName, go =>
+                {
+                    if (ore.type != ResourceType.Oil) ReplaceMaterial(go, mats["Ore"], oreMat);
+                    AddConvexMeshCollider(go);
+                    ResourceNode node = go.AddComponent<ResourceNode>();
+                    node.type = ore.type;
+                    HarvestableRock rock = go.AddComponent<HarvestableRock>();
+                    rock.itemName = ore.type.ToString();
+                    rock.displayName = ore.displayName;
+                    rock.amount = ore.amount;
+                    rock.amountPerHit = 10;
+                    rock.chunkPrefab = chunk;
+                    rock.chunkMaterial = ore.type == ResourceType.Oil ? mats["RockDark"] : oreMat;
+                    rock.dustColor = ore.color;
+                    rock.particleMaterial = particles;
+                });
+            }
+        }
+
+        EnsureFolder(MachineResourceFolder);
+        foreach (string name in MachineModels)
+        {
+            SavePrefab(name, name, go =>
+            {
+                Bounds b = go.GetComponentInChildren<Renderer>().bounds;
+                BoxCollider box = go.AddComponent<BoxCollider>();
+                box.center = b.center;
+                box.size = b.size;
+            }, MachineResourceFolder);
+        }
+
         AssetDatabase.SaveAssets();
         Debug.Log("Harvestable-Prefabs erstellt in " + PrefabFolder);
     }
+    private struct OreSpec
+    {
+        public ResourceType type;
+        public string displayName;
+        public Color color;
+        public float metallic;
+        public float smoothness;
+        public Color emission;
+        public int amount;
+    }
+    private static readonly string[] OreModels = { "Ore_Node_A", "Ore_Node_B" };
+    private static readonly string[] MachineModels = { "Machine_Constructor", "Conveyor_Belt" };
+    private const string MachineResourceFolder = "Assets/Factory/Resources/Machines";
+    private static readonly OreSpec[] OreSpecs =
+    {
+        new OreSpec { type = ResourceType.Iron, displayName = "Eisenerz", color = new Color(0.66f, 0.33f, 0.24f), metallic = 0.35f, smoothness = 0.35f, amount = 60 },
+        new OreSpec { type = ResourceType.Copper, displayName = "Kupfererz", color = new Color(0.88f, 0.50f, 0.20f), metallic = 0.45f, smoothness = 0.45f, amount = 60 },
+        new OreSpec { type = ResourceType.Coal, displayName = "Kohle", color = new Color(0.08f, 0.08f, 0.09f), smoothness = 0.45f, amount = 60 },
+        new OreSpec { type = ResourceType.Stone, displayName = "Kalkstein", color = new Color(0.84f, 0.81f, 0.73f), smoothness = 0.15f, amount = 60 },
+        new OreSpec { type = ResourceType.Uranium, displayName = "Uran", color = new Color(0.38f, 0.95f, 0.30f), smoothness = 0.5f, emission = new Color(0.25f, 0.85f, 0.18f), amount = 40 },
+        new OreSpec { type = ResourceType.Oil, displayName = "Oel", color = new Color(0.05f, 0.05f, 0.06f), smoothness = 0.9f, amount = 40 },
+    };
     private static void AssignHarvestablePrefabs(MapGenerator generator)
     {
         bool modelsExist = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsFolder + "/Tree_Pine_A.fbx") != null;
-        bool prefabsExist = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabFolder + "/Tree_Pine_A.prefab") != null;
+        bool prefabsExist = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabFolder + "/Tree_Pine_A.prefab") != null
+            && AssetDatabase.LoadAssetAtPath<GameObject>(PrefabFolder + "/Ore_Iron_A.prefab") != null;
         if (modelsExist && !prefabsExist) SetupHarvestablePrefabs();
 
         generator.treePrefabs = LoadPrefabs(TreeModels, "");
         generator.autumnTreePrefabs = LoadPrefabs(AutumnModels, "_Autumn");
         generator.rockPrefabs = LoadPrefabs(RockModels, "");
+        List<MapGenerator.OrePrefabSet> sets = new List<MapGenerator.OrePrefabSet>();
+        foreach (OreSpec ore in OreSpecs)
+        {
+            int count = ore.type == ResourceType.Oil ? 1 : OreModels.Length;
+            string[] names = new string[count];
+            for (int i = 0; i < count; i++) names[i] = "Ore_" + ore.type + "_" + (char)('A' + i);
+            sets.Add(new MapGenerator.OrePrefabSet { type = ore.type, prefabs = LoadPrefabs(names, "") });
+        }
+        generator.orePrefabs = sets.ToArray();
         Debug.Log("Harvestable-Prefabs zugewiesen: " + generator.treePrefabs.Length + " Baeume, "
             + generator.autumnTreePrefabs.Length + " Herbstbaeume, " + generator.rockPrefabs.Length + " Felsen");
     }
@@ -483,7 +562,7 @@ public static class FactoryMapSetup
         }
         return result.ToArray();
     }
-    private static Material CreateLitMaterial(string name, Color color)
+    private static Material CreateLitMaterial(string name, Color color, float metallic = 0f, float smoothness = 0.1f, Color emission = default)
     {
         string path = MaterialFolder + "/" + name + ".mat";
         Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -493,7 +572,14 @@ public static class FactoryMapSetup
             AssetDatabase.CreateAsset(mat, path);
         }
         mat.SetColor("_BaseColor", color);
-        if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+        if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", smoothness);
+        if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", metallic);
+        if (emission.maxColorComponent > 0f)
+        {
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", emission);
+            mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+        }
         mat.enableInstancing = true;
         EditorUtility.SetDirty(mat);
         return mat;
@@ -525,7 +611,7 @@ public static class FactoryMapSetup
             importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), entry.Key), entry.Value);
         importer.SaveAndReimport();
     }
-    private static GameObject SavePrefab(string prefabName, string modelName, System.Action<GameObject> configure)
+    private static GameObject SavePrefab(string prefabName, string modelName, System.Action<GameObject> configure, string folder = PrefabFolder)
     {
         GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsFolder + "/" + modelName + ".fbx");
         if (model == null)
@@ -536,10 +622,16 @@ public static class FactoryMapSetup
         GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(model);
         instance.name = prefabName;
         configure(instance);
-        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(instance, PrefabFolder + "/" + prefabName + ".prefab");
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(instance, folder + "/" + prefabName + ".prefab");
         Renderer r = instance.GetComponentInChildren<Renderer>();
         string materialNames = string.Join(", ", System.Array.ConvertAll(r.sharedMaterials, m => m != null ? m.name : "null"));
         Debug.Log("Prefab " + prefabName + ": Groesse " + r.bounds.size + ", Materialien [" + materialNames + "]");
+        MeshFilter mf = instance.GetComponentInChildren<MeshFilter>();
+        if (prefabName.StartsWith("Machine") && mf != null)
+        {
+            for (int i = 0; i < mf.sharedMesh.subMeshCount && i < r.sharedMaterials.Length; i++)
+                Debug.Log("  Teil " + r.sharedMaterials[i].name + " Mitte " + mf.sharedMesh.GetSubMesh(i).bounds.center);
+        }
         Object.DestroyImmediate(instance);
         return prefab;
     }

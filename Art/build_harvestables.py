@@ -20,6 +20,15 @@ COLORS = {
     "Rock": (0.45, 0.44, 0.42),
     "RockDark": (0.32, 0.31, 0.30),
     "Moss": (0.30, 0.45, 0.20),
+    "Ore": (0.80, 0.42, 0.18),
+    "Oil": (0.03, 0.03, 0.04),
+    "MachineBody": (0.90, 0.52, 0.12),
+    "MachineDark": (0.16, 0.17, 0.19),
+    "MachineMetal": (0.62, 0.64, 0.66),
+    "PortIn": (0.20, 0.75, 0.30),
+    "PortOut": (0.20, 0.50, 0.90),
+    "Belt": (0.09, 0.09, 0.10),
+    "BeltMark": (0.95, 0.80, 0.15),
 }
 
 
@@ -219,6 +228,79 @@ def build_chunk(name, seed):
     return obj
 
 
+def add_crystal(bm, base, direction, radius, length, mat_idx, rng):
+    rot = Vector((0.0, 0.0, 1.0)).rotation_difference(direction.normalized()).to_matrix()
+    segments = 5
+    lower = []
+    upper = []
+    for i in range(segments):
+        a = i * 2.0 * math.pi / segments + rng.uniform(-0.2, 0.2)
+        lower.append(bm.verts.new(base + rot @ Vector((math.cos(a) * radius, math.sin(a) * radius, 0.0))))
+        upper.append(bm.verts.new(base + rot @ Vector((math.cos(a) * radius * 0.85, math.sin(a) * radius * 0.85, length * 0.7))))
+    tip = bm.verts.new(base + rot @ Vector((0.0, 0.0, length)))
+    faces = [bm.faces.new(list(reversed(lower)))]
+    for i in range(segments):
+        j = (i + 1) % segments
+        faces.append(bm.faces.new((lower[i], lower[j], upper[j], upper[i])))
+        faces.append(bm.faces.new((upper[i], upper[j], tip)))
+    for f in faces:
+        f.material_index = mat_idx
+
+
+def build_ore_node(name, seed, size, crystal_count):
+    rng = random.Random(seed)
+    obj = new_object(name, bmesh.new())
+    rock = material_index(obj, "Rock")
+    dark = material_index(obj, "RockDark")
+    ore = material_index(obj, "Ore")
+    bm = bmesh.new()
+    result = bmesh.ops.create_icosphere(bm, subdivisions=2, radius=1.0)
+    for v in result["verts"]:
+        n = v.co.normalized()
+        d = 1.0 + rng.uniform(-0.2, 0.15)
+        v.co = Vector((n.x * d * size[0] * 0.5, n.y * d * size[1] * 0.5, n.z * d * size[2] * 0.5 + size[2] * 0.35))
+        if v.co.z < 0.0:
+            v.co.z = 0.0
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.02)
+    bm.normal_update()
+    for f in bm.faces:
+        f.material_index = dark if (f.normal.z < 0.15 and rng.random() < 0.5) else rock
+    center = Vector((0.0, 0.0, size[2] * 0.35))
+    candidates = [v.co.copy() for v in bm.verts if v.co.z > size[2] * 0.45]
+    rng.shuffle(candidates)
+    for p in candidates[:crystal_count]:
+        out = p - center
+        out.z = max(out.z, 0.2)
+        direction = (out.normalized() + Vector((0.0, 0.0, 0.6))).normalized()
+        base = center + (p - center) * 0.85
+        add_crystal(bm, base, direction, rng.uniform(0.12, 0.2) * size[2], rng.uniform(0.45, 0.8) * size[2], ore, rng)
+    bm.to_mesh(obj.data)
+    bm.free()
+    finalize(obj)
+    return obj
+
+
+def build_oil_seep(name, seed):
+    rng = random.Random(seed)
+    obj = new_object(name, bmesh.new())
+    dark = material_index(obj, "RockDark")
+    oil = material_index(obj, "Oil")
+    bm = bmesh.new()
+    count = 7
+    for i in range(count):
+        a = i * 2.0 * math.pi / count + rng.uniform(-0.25, 0.25)
+        r = rng.uniform(0.35, 0.55)
+        add_blob(bm, (math.cos(a) * 1.35, math.sin(a) * 1.35, r * 0.4), r, (1.0, 1.0, 0.8), 1, dark, 0.2, rng)
+    for v in bm.verts:
+        if v.co.z < 0.0:
+            v.co.z = 0.0
+    add_cone(bm, 10, 1.2, 1.2, 0.0, 0.12, oil, 0.04, rng)
+    bm.to_mesh(obj.data)
+    bm.free()
+    finalize(obj)
+    return obj
+
+
 def export_fbx(obj):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
@@ -308,6 +390,9 @@ def main():
         build_rock("Rock_B", 83, (1.7, 1.5, 2.1), 2, False),
         build_rock("Rock_C", 97, (3.0, 2.3, 1.3), 2, True),
         build_chunk("Rock_Chunk", 101),
+        build_ore_node("Ore_Node_A", 113, (2.6, 2.3, 1.7), 6),
+        build_ore_node("Ore_Node_B", 127, (2.1, 2.4, 2.0), 8),
+        build_oil_seep("Oil_Seep", 139),
     ]
     for obj in models:
         path = export_fbx(obj)
@@ -320,4 +405,5 @@ def main():
     print("PREVIEW", PREVIEW_PATH)
 
 
-main()
+if __name__ == "__main__":
+    main()

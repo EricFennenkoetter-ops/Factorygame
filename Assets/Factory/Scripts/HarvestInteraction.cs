@@ -53,11 +53,11 @@ public class HarvestInteraction : MonoBehaviour
         HarvestableRock rock = hit.collider.GetComponentInParent<HarvestableRock>();
         if (rock != null && !rock.IsDepleted)
         {
-            promptText = holdHint + "Stein abbauen (" + rock.stoneAmount + " Stein)";
+            promptText = holdHint + rock.displayName + " abbauen (" + rock.amount + ")";
             if (doHit)
             {
-                int stone = rock.Hit(hit.point, ray.direction);
-                if (stone > 0) FactoryItemBridge.Add("Stone", stone);
+                int mined = rock.Hit(hit.point, ray.direction);
+                if (mined > 0) FactoryItemBridge.Add(rock.itemName, mined);
                 nextHitTime = Time.time + hitInterval;
             }
             return;

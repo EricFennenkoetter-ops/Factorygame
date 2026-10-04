@@ -1,13 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class HarvestableRock : MonoBehaviour
 {
-    public int stoneAmount = 30;
-    public int stonePerHit = 5;
+    public string itemName = "Stone";
+    public string displayName = "Stein";
+    [FormerlySerializedAs("stoneAmount")] public int amount = 30;
+    [FormerlySerializedAs("stonePerHit")] public int amountPerHit = 5;
     public int stages = 3;
     public GameObject chunkPrefab;
+    public Material chunkMaterial;
     public int chunkCount = 6;
     public Material particleMaterial;
     public Color dustColor = new Color(0.58f, 0.57f, 0.55f);
@@ -18,18 +22,18 @@ public class HarvestableRock : MonoBehaviour
     void Awake()
     {
         baseScale = transform.localScale;
-        startAmount = Mathf.Max(1, stoneAmount);
+        startAmount = Mathf.Max(1, amount);
     }
     public int Hit(Vector3 hitPoint, Vector3 hitDirection)
     {
         if (IsDepleted) return 0;
 
-        int given = Mathf.Min(stonePerHit, stoneAmount);
-        stoneAmount -= given;
+        int given = Mathf.Min(amountPerHit, amount);
+        amount -= given;
         HarvestFX.Burst(hitPoint, dustColor, 16, particleMaterial);
 
         if (punchRoutine != null) StopCoroutine(punchRoutine);
-        if (stoneAmount <= 0)
+        if (amount <= 0)
             StartCoroutine(Crumble());
         else
             punchRoutine = StartCoroutine(Punch(StageScale()));
@@ -38,7 +42,7 @@ public class HarvestableRock : MonoBehaviour
     }
     private Vector3 StageScale()
     {
-        float remaining = (float)stoneAmount / startAmount;
+        float remaining = (float)amount / startAmount;
         float stage = Mathf.Ceil(remaining * stages) / stages;
         return baseScale * Mathf.Lerp(0.5f, 1f, stage);
     }
@@ -77,6 +81,15 @@ public class HarvestableRock : MonoBehaviour
                 Vector3 offset = new Vector3(Random.Range(-0.6f, 0.6f), Random.Range(0.3f, 0.9f), Random.Range(-0.6f, 0.6f)) * size;
                 GameObject chunk = Instantiate(chunkPrefab, transform.position + offset, Random.rotation);
                 chunk.transform.localScale = Vector3.one * size * Random.Range(0.8f, 1.3f);
+                if (chunkMaterial != null)
+                {
+                    foreach (Renderer r in chunk.GetComponentsInChildren<Renderer>())
+                    {
+                        Material[] mats = r.sharedMaterials;
+                        for (int m = 0; m < mats.Length; m++) mats[m] = chunkMaterial;
+                        r.sharedMaterials = mats;
+                    }
+                }
                 Rigidbody rb = chunk.GetComponent<Rigidbody>();
                 if (rb == null) rb = chunk.AddComponent<Rigidbody>();
                 Vector3 outward = new Vector3(offset.x, 0f, offset.z).normalized;
@@ -93,12 +106,26 @@ public class HarvestableRock : MonoBehaviour
 
         yield return new WaitForSeconds(2.5f);
 
+        List<Vector3> startScales = new List<Vector3>();
+        foreach (GameObject chunk in chunks)
+        {
+            if (chunk == null)
+            {
+                startScales.Add(Vector3.zero);
+                continue;
+            }
+            Rigidbody rb = chunk.GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = true;
+            foreach (Collider c in chunk.GetComponentsInChildren<Collider>())
+                c.enabled = false;
+            startScales.Add(chunk.transform.localScale);
+        }
         for (float t = 0f; t < 0.6f; t += Time.deltaTime)
         {
-            foreach (GameObject chunk in chunks)
+            for (int i = 0; i < chunks.Count; i++)
             {
-                if (chunk != null)
-                    chunk.transform.localScale = Vector3.Lerp(chunk.transform.localScale, Vector3.zero, t / 0.6f);
+                if (chunks[i] != null)
+                    chunks[i].transform.localScale = Vector3.Lerp(startScales[i], startScales[i] * 0.05f, t / 0.6f);
             }
             yield return null;
         }

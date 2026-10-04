@@ -232,20 +232,28 @@ public class BuildModeController : MonoBehaviour
         if (!currentValidPlacement) return;
 
         MachineDefinition def = machines[selectedIndex];
-        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        go.name = "Machine_" + def.machineName;
-        go.transform.SetParent(placedMachinesParent);
-        go.transform.position = new Vector3(currentPlacementPoint.x, currentPlacementPoint.y + def.height * 0.5f, currentPlacementPoint.z);
-        go.transform.rotation = Quaternion.Euler(0f, currentRotationY, 0f);
-        Vector2 visual = def.GetVisualSize();
-        go.transform.localScale = new Vector3(visual.x, def.height, visual.y);
+        GameObject go;
+        if (def.prefab != null)
+        {
+            go = Instantiate(def.prefab, currentPlacementPoint, Quaternion.Euler(0f, currentRotationY, 0f), placedMachinesParent);
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.transform.SetParent(placedMachinesParent);
+            go.transform.position = new Vector3(currentPlacementPoint.x, currentPlacementPoint.y + def.height * 0.5f, currentPlacementPoint.z);
+            go.transform.rotation = Quaternion.Euler(0f, currentRotationY, 0f);
+            Vector2 visual = def.GetVisualSize();
+            go.transform.localScale = new Vector3(visual.x, def.height, visual.y);
 
-        Renderer r = go.GetComponent<Renderer>();
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null) shader = Shader.Find("Standard");
-        Material mat = new Material(shader);
-        mat.color = def.color;
-        r.sharedMaterial = mat;
+            Renderer r = go.GetComponent<Renderer>();
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            Material mat = new Material(shader);
+            mat.color = def.color;
+            r.sharedMaterial = mat;
+        }
+        go.name = "Machine_" + def.machineName;
 
         MachineNode node = go.AddComponent<MachineNode>();
         node.machineType = def.machineName;
