@@ -14,3 +14,4 @@
 ignore.conf
 *.private.*
 /Assets/Scenes/FactoryMap.unity*
+*.blend1

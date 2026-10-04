@@ -66,9 +66,13 @@ public class MapGenerator : MonoBehaviour
     [Range(0f, 1f)] public float rockClusterThreshold = 0.68f;
     public float rockGridSpacing = 22f; // groesser = weniger dicht, mehr Platz zum Laufen
     [Range(0f, 1f)] public float rockSpawnChance = 0.3f;
+    public GameObject[] rockPrefabs; // Low-Poly-Felsen aus Blender - leer lassen fuer die alten Wuerfel-Felsen
 
     [Header("Baeume")]
     public GameObject treePrefab; // optional - leer lassen fuer einfache prozedurale Baeume
+    public GameObject[] treePrefabs; // Low-Poly-Baeume aus Blender, werden zufaellig gewaehlt (hat Vorrang vor treePrefab)
+    public GameObject[] autumnTreePrefabs; // Herbst-Varianten der Laubbaeume
+    [Range(0f, 1f)] public float autumnTreeChance = 0.12f;
     public float treeGridSpacing = 13f; // groesser = weniger dicht, mehr Platz zum Laufen zwischen Baeumen
     public float treeNoiseScale = 45f;
     [Range(0f, 1f)] public float treeClusterThreshold = 0.55f;
@@ -605,16 +609,27 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
+    // Waehlt zufaellig ein Baum-Prefab; gelegentlich eine Herbst-Variante fuer Farbabwechslung.
+    private GameObject PickTreePrefab()
+    {
+        if (autumnTreePrefabs != null && autumnTreePrefabs.Length > 0 && Random.value < autumnTreeChance)
+            return autumnTreePrefabs[Random.Range(0, autumnTreePrefabs.Length)];
+        if (treePrefabs != null && treePrefabs.Length > 0)
+            return treePrefabs[Random.Range(0, treePrefabs.Length)];
+        return treePrefab;
+    }
+
     private void SpawnTreeAt(Vector3 pos)
     {
         GameObject tree;
-        if (treePrefab != null)
+        GameObject prefab = PickTreePrefab();
+        if (prefab != null)
         {
 #if UNITY_EDITOR
-            tree = (GameObject)PrefabUtility.InstantiatePrefab(treePrefab, vegetationParent);
+            tree = (GameObject)PrefabUtility.InstantiatePrefab(prefab, vegetationParent);
             tree.transform.position = pos;
 #else
-            tree = Instantiate(treePrefab, pos, Quaternion.identity, vegetationParent);
+            tree = Instantiate(prefab, pos, Quaternion.identity, vegetationParent);
 #endif
         }
         else
@@ -715,6 +730,24 @@ public class MapGenerator : MonoBehaviour
     // wirkt kantiger/natuerlicher als eine einzelne perfekte Kugel.
     private void SpawnRockAt(Vector3 pos)
     {
+        // Low-Poly-Felsen aus Blender (abbaubar). Leicht in den Boden gesetzt, damit sie
+        // auf Haengen nicht schweben.
+        if (rockPrefabs != null && rockPrefabs.Length > 0)
+        {
+            GameObject prefab = rockPrefabs[Random.Range(0, rockPrefabs.Length)];
+            GameObject rock;
+#if UNITY_EDITOR
+            rock = (GameObject)PrefabUtility.InstantiatePrefab(prefab, vegetationParent);
+#else
+            rock = Instantiate(prefab, vegetationParent);
+#endif
+            float rockScale = Random.Range(0.8f, 1.7f);
+            rock.transform.position = pos + Vector3.down * 0.2f * rockScale;
+            rock.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            rock.transform.localScale = Vector3.one * rockScale;
+            return;
+        }
+
         GameObject root = new GameObject("Rock");
         root.transform.SetParent(vegetationParent);
         root.transform.position = pos;

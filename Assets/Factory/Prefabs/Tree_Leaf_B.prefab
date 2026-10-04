@@ -1,0 +1,134 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &3501424995135961534
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      propertyPath: m_Name
+      value: Tree_Leaf_B
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3987074385878332418}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2882597531888096722}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3361789587833732643}
+  m_SourcePrefab: {fileID: 100100000, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+--- !u!1 &4347916111158543599 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: efb6a949c5ae94c41950057c67d2a181, type: 3}
+  m_PrefabInstance: {fileID: 3501424995135961534}
+  m_PrefabAsset: {fileID: 0}
+--- !u!136 &3987074385878332418
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4347916111158543599}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.55
+  m_Height: 5.2522435
+  m_Direction: 1
+  m_Center: {x: 0, y: 2.6261218, z: 0}
+--- !u!65 &2882597531888096722
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4347916111158543599}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 3.146515, y: 7.8783655, z: 3.2825308}
+  m_Center: {x: -0.09009433, y: 6.3005657, z: 0.27703547}
+--- !u!114 &3361789587833732643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4347916111158543599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85cafa2743053419ea869d3891f20ea8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HarvestableTree
+  woodAmount: 50
+  woodPerHit: 10
+  stumpPrefab: {fileID: 3567662870907798649, guid: 906f1b0fb89e84a9783ce86d7f301641, type: 3}
+  particleMaterial: {fileID: 2100000, guid: 19d9cf60bc09e4b9082e7b66b2a03113, type: 2}
+  chipColor: {r: 0.62, g: 0.45, b: 0.28, a: 1}

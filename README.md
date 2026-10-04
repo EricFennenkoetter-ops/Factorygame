@@ -22,7 +22,7 @@ Taste kann man zwischen Fabrik-Welt und Casino wechseln.
 |---|---|
 | W A S D / Maus | Bewegen / Umsehen |
 | Leertaste / Shift / Strg | Springen / Sprinten / Ducken |
-| H | Am Baum oder Erz Material abbauen |
+| H (halten) | Baum fällen, Felsen oder Erz abbauen (ein Treffer alle 0,6 s) |
 | B | Baumodus an/aus (1-6 oder Mausrad: Maschine wählen, R: drehen, Linksklick: bauen, Rechtsklick: entfernen) |
 | C | Crafting-Menü öffnen/schließen |
 | 1-0 / Mausrad | Hotbar-Slot wählen |
@@ -36,7 +36,7 @@ Taste kann man zwischen Fabrik-Welt und Casino wechseln.
 - **Prozedurale Welt:** Terrain, Biome, Seen und Flüsse, Bäume, Felsen und
   Erzvorkommen (`Assets/Factory/Scripts/MapGenerator.cs`)
 - **Bausystem:** Raster-basiertes Platzieren von Maschinen
-- **Abbau und Crafting:** Materialien sammeln und zu neuen Gegenständen verarbeiten
+- **Abbau und Crafting:** Bäume fällen und Felsen abbauen (Low-Poly-Modelle aus Blender, mit Treffer-, Fall- und Zerbröckel-Animation), Materialien zu neuen Gegenständen verarbeiten
 - **Hotbar:** Gemeinsames Inventar für Casino- und Fabrik-Gegenstände
 
 ## Ordnerstruktur
@@ -49,6 +49,7 @@ Assets/
     Editor/     Editor-Werkzeuge (Menü "Factory")
   Scenes/       SampleScene = das komplette Spiel (Casino + Fabrik-Welt)
   Casino Building/, Character/, Gui Icons/, Materials/   Modelle, Grafiken, Materialien
+Art/            Blender-Quelldatei und Script, mit dem die Baum- und Felsmodelle erzeugt werden
 docs/           Dokumentation (PDF)
 ```
 

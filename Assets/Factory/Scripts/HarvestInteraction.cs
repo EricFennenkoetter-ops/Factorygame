@@ -3,10 +3,12 @@ using UnityEngine;
 public class HarvestInteraction : MonoBehaviour
 {
     public KeyCode harvestKey = KeyCode.H;
-    public float harvestDistance = 5f;
-    public int harvestAmountPerPress = 10;
+    public float harvestDistance = 6f;
+    public float hitInterval = 0.6f;
+    public int oreAmountPerHit = 10;
     private Camera cam;
     private string promptText = "";
+    private float nextHitTime;
     void Start()
     {
         cam = ResolveCamera();
@@ -32,28 +34,44 @@ public class HarvestInteraction : MonoBehaviour
         Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         if (!Physics.Raycast(ray, out RaycastHit hit, harvestDistance)) return;
 
-        ResourceNode node = hit.collider.GetComponentInParent<ResourceNode>();
-        if (node != null)
+        bool doHit = Input.GetKey(harvestKey) && Time.time >= nextHitTime;
+        string holdHint = "[" + harvestKey + " halten] ";
+
+        HarvestableTree tree = hit.collider.GetComponentInParent<HarvestableTree>();
+        if (tree != null && !tree.IsFelled)
         {
-            promptText = "[" + harvestKey + "] " + node.type + " abbauen";
-            if (Input.GetKeyDown(harvestKey))
+            promptText = holdHint + "Baum faellen (" + tree.woodAmount + " Holz)";
+            if (doHit)
             {
-                int mined = node.Mine(harvestAmountPerPress);
-                if (mined > 0)
-                    FactoryItemBridge.Add(node.type.ToString(), mined);
+                int wood = tree.Hit(hit.point, ray.direction);
+                if (wood > 0) FactoryItemBridge.Add("Wood", wood);
+                nextHitTime = Time.time + hitInterval;
             }
             return;
         }
 
-        HarvestableTree tree = hit.collider.GetComponentInParent<HarvestableTree>();
-        if (tree != null)
+        HarvestableRock rock = hit.collider.GetComponentInParent<HarvestableRock>();
+        if (rock != null && !rock.IsDepleted)
         {
-            promptText = "[" + harvestKey + "] Holz sammeln";
-            if (Input.GetKeyDown(harvestKey))
+            promptText = holdHint + "Stein abbauen (" + rock.stoneAmount + " Stein)";
+            if (doHit)
             {
-                int wood = tree.Chop(harvestAmountPerPress);
-                if (wood > 0)
-                    FactoryItemBridge.Add("Wood", wood);
+                int stone = rock.Hit(hit.point, ray.direction);
+                if (stone > 0) FactoryItemBridge.Add("Stone", stone);
+                nextHitTime = Time.time + hitInterval;
+            }
+            return;
+        }
+
+        ResourceNode node = hit.collider.GetComponentInParent<ResourceNode>();
+        if (node != null)
+        {
+            promptText = holdHint + node.type + " abbauen (" + node.amount + ")";
+            if (doHit)
+            {
+                int mined = node.Mine(oreAmountPerHit);
+                if (mined > 0) FactoryItemBridge.Add(node.type.ToString(), mined);
+                nextHitTime = Time.time + hitInterval;
             }
         }
     }
@@ -61,6 +79,6 @@ public class HarvestInteraction : MonoBehaviour
     {
         if (string.IsNullOrEmpty(promptText)) return;
         GUI.color = Color.white;
-        GUI.Label(new Rect(Screen.width * 0.5f - 100f, Screen.height * 0.5f + 20f, 200f, 24f), promptText);
+        GUI.Label(new Rect(Screen.width * 0.5f - 150f, Screen.height * 0.5f + 20f, 300f, 24f), promptText);
     }
 }

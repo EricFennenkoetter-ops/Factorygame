@@ -105,12 +105,18 @@ public static class FactoryMapSetup
         GameObject existingRoot = GameObject.Find("FactoryMap");
         if (existingRoot != null)
         {
-            bool redo = EditorUtility.DisplayDialog(
-                "Factory-Map existiert bereits",
-                "In der SampleScene ist bereits eine 'FactoryMap' vorhanden. Neu generieren und die alte ersetzen?",
-                "Neu generieren", "Abbrechen");
-            if (!redo) return;
+            if (!Application.isBatchMode)
+            {
+                bool redo = EditorUtility.DisplayDialog(
+                    "Factory-Map existiert bereits",
+                    "In der SampleScene ist bereits eine 'FactoryMap' vorhanden. Neu generieren und die alte ersetzen?",
+                    "Neu generieren", "Abbrechen");
+                if (!redo) return;
+            }
+            Terrain oldTerrain = existingRoot.GetComponentInChildren<Terrain>();
+            string oldTerrainPath = oldTerrain != null ? AssetDatabase.GetAssetPath(oldTerrain.terrainData) : null;
             Object.DestroyImmediate(existingRoot);
+            if (!string.IsNullOrEmpty(oldTerrainPath)) AssetDatabase.DeleteAsset(oldTerrainPath);
         }
 
         Vector3 mapRootOffset = new Vector3(3000f, 0f, -1000f);
@@ -385,6 +391,7 @@ public static class FactoryMapSetup
         generator.seed = 12345;
         generator.terrainSize = terrainData.size;
         generator.heightmapResolution = 513;
+        AssignHarvestablePrefabs(generator);
 
         generator.GenerateMap();
 
@@ -394,6 +401,186 @@ public static class FactoryMapSetup
         AssetDatabase.SaveAssets();
 
         return root;
+    }
+    private const string ModelsFolder = "Assets/Factory/Models";
+    private const string PrefabFolder = "Assets/Factory/Prefabs";
+    private const string MaterialFolder = "Assets/Factory/Materials";
+    private static readonly string[] TreeModels = { "Tree_Pine_A", "Tree_Pine_B", "Tree_Pine_C", "Tree_Leaf_A", "Tree_Leaf_B" };
+    private static readonly string[] AutumnModels = { "Tree_Leaf_A", "Tree_Leaf_B" };
+    private static readonly string[] RockModels = { "Rock_A", "Rock_B", "Rock_C" };
+    [MenuItem("Factory/Setup Harvestable Prefabs")]
+    public static void SetupHarvestablePrefabs()
+    {
+        EnsureFolder(PrefabFolder);
+        EnsureFolder(MaterialFolder);
+
+        Dictionary<string, Material> mats = new Dictionary<string, Material>
+        {
+            { "Bark", CreateLitMaterial("Bark", new Color(0.36f, 0.24f, 0.15f)) },
+            { "WoodCut", CreateLitMaterial("WoodCut", new Color(0.82f, 0.65f, 0.43f)) },
+            { "Needles", CreateLitMaterial("Needles", new Color(0.16f, 0.42f, 0.20f)) },
+            { "Leaves", CreateLitMaterial("Leaves", new Color(0.33f, 0.60f, 0.21f)) },
+            { "Rock", CreateLitMaterial("Rock", new Color(0.52f, 0.51f, 0.49f)) },
+            { "RockDark", CreateLitMaterial("RockDark", new Color(0.38f, 0.37f, 0.36f)) },
+            { "Moss", CreateLitMaterial("Moss", new Color(0.33f, 0.50f, 0.22f)) },
+        };
+        Material autumn = CreateLitMaterial("LeavesAutumn", new Color(0.85f, 0.52f, 0.12f));
+        Material particles = CreateParticleMaterial();
+
+        foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { ModelsFolder }))
+            ConfigureModelImporter(AssetDatabase.GUIDToAssetPath(guid), mats);
+
+        GameObject stump = SavePrefab("Tree_Stump", "Tree_Stump", go => { });
+        GameObject chunk = SavePrefab("Rock_Chunk", "Rock_Chunk", go =>
+        {
+            AddConvexMeshCollider(go);
+            Rigidbody rb = go.AddComponent<Rigidbody>();
+            rb.mass = 0.5f;
+        });
+        foreach (string name in TreeModels)
+            SavePrefab(name, name, go => AddTreeComponents(go, stump, particles));
+        foreach (string name in AutumnModels)
+        {
+            SavePrefab(name + "_Autumn", name, go =>
+            {
+                AddTreeComponents(go, stump, particles);
+                ReplaceMaterial(go, mats["Leaves"], autumn);
+            });
+        }
+        foreach (string name in RockModels)
+        {
+            SavePrefab(name, name, go =>
+            {
+                AddConvexMeshCollider(go);
+                HarvestableRock rock = go.AddComponent<HarvestableRock>();
+                rock.chunkPrefab = chunk;
+                rock.particleMaterial = particles;
+            });
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("Harvestable-Prefabs erstellt in " + PrefabFolder);
+    }
+    private static void AssignHarvestablePrefabs(MapGenerator generator)
+    {
+        bool modelsExist = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsFolder + "/Tree_Pine_A.fbx") != null;
+        bool prefabsExist = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabFolder + "/Tree_Pine_A.prefab") != null;
+        if (modelsExist && !prefabsExist) SetupHarvestablePrefabs();
+
+        generator.treePrefabs = LoadPrefabs(TreeModels, "");
+        generator.autumnTreePrefabs = LoadPrefabs(AutumnModels, "_Autumn");
+        generator.rockPrefabs = LoadPrefabs(RockModels, "");
+        Debug.Log("Harvestable-Prefabs zugewiesen: " + generator.treePrefabs.Length + " Baeume, "
+            + generator.autumnTreePrefabs.Length + " Herbstbaeume, " + generator.rockPrefabs.Length + " Felsen");
+    }
+    private static GameObject[] LoadPrefabs(string[] names, string suffix)
+    {
+        List<GameObject> result = new List<GameObject>();
+        foreach (string name in names)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabFolder + "/" + name + suffix + ".prefab");
+            if (prefab != null) result.Add(prefab);
+        }
+        return result.ToArray();
+    }
+    private static Material CreateLitMaterial(string name, Color color)
+    {
+        string path = MaterialFolder + "/" + name + ".mat";
+        Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null)
+        {
+            mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        mat.SetColor("_BaseColor", color);
+        if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+        mat.enableInstancing = true;
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+    private static Material CreateParticleMaterial()
+    {
+        string path = MaterialFolder + "/HarvestParticles.mat";
+        Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            mat = new Material(shader);
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        return mat;
+    }
+    private static void ConfigureModelImporter(string path, Dictionary<string, Material> mats)
+    {
+        ModelImporter importer = AssetImporter.GetAtPath(path) as ModelImporter;
+        if (importer == null) return;
+        importer.importAnimation = false;
+        importer.importCameras = false;
+        importer.importLights = false;
+        importer.animationType = ModelImporterAnimationType.None;
+        importer.isReadable = true;
+        importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+        foreach (KeyValuePair<string, Material> entry in mats)
+            importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), entry.Key), entry.Value);
+        importer.SaveAndReimport();
+    }
+    private static GameObject SavePrefab(string prefabName, string modelName, System.Action<GameObject> configure)
+    {
+        GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsFolder + "/" + modelName + ".fbx");
+        if (model == null)
+        {
+            Debug.LogError("Modell fehlt: " + modelName);
+            return null;
+        }
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(model);
+        instance.name = prefabName;
+        configure(instance);
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(instance, PrefabFolder + "/" + prefabName + ".prefab");
+        Renderer r = instance.GetComponentInChildren<Renderer>();
+        string materialNames = string.Join(", ", System.Array.ConvertAll(r.sharedMaterials, m => m != null ? m.name : "null"));
+        Debug.Log("Prefab " + prefabName + ": Groesse " + r.bounds.size + ", Materialien [" + materialNames + "]");
+        Object.DestroyImmediate(instance);
+        return prefab;
+    }
+    private static void AddConvexMeshCollider(GameObject go)
+    {
+        MeshFilter mf = go.GetComponentInChildren<MeshFilter>();
+        MeshCollider mc = mf.gameObject.AddComponent<MeshCollider>();
+        mc.sharedMesh = mf.sharedMesh;
+        mc.convex = true;
+    }
+    private static void AddTreeComponents(GameObject go, GameObject stump, Material particles)
+    {
+        Bounds b = go.GetComponentInChildren<Renderer>().bounds;
+        CapsuleCollider trunk = go.AddComponent<CapsuleCollider>();
+        trunk.radius = 0.55f;
+        trunk.height = b.size.y * 0.5f;
+        trunk.center = new Vector3(0f, trunk.height * 0.5f, 0f);
+        BoxCollider canopy = go.AddComponent<BoxCollider>();
+        canopy.isTrigger = true;
+        canopy.center = new Vector3(b.center.x, b.center.y + b.size.y * 0.1f, b.center.z);
+        canopy.size = new Vector3(b.size.x * 0.7f, b.size.y * 0.75f, b.size.z * 0.7f);
+        HarvestableTree tree = go.AddComponent<HarvestableTree>();
+        tree.stumpPrefab = stump;
+        tree.particleMaterial = particles;
+    }
+    private static void ReplaceMaterial(GameObject go, Material from, Material to)
+    {
+        foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+        {
+            Material[] shared = r.sharedMaterials;
+            for (int i = 0; i < shared.Length; i++)
+            {
+                if (shared[i] == from) shared[i] = to;
+            }
+            r.sharedMaterials = shared;
+        }
+    }
+    public static void BakeBatch()
+    {
+        SetupHarvestablePrefabs();
+        BakeMapIntoSampleScene();
     }
     private static void EnsureFolder(string path)
     {
